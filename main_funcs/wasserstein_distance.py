@@ -3,6 +3,7 @@ from scipy.stats import wasserstein_distance
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
+import os
 
 class wassersteinPipeline():
     """Pipeline that takes an openITI corpus path and metadata and given a set of keywords
@@ -52,6 +53,8 @@ class wassersteinPipeline():
         for data in offset_data:
             normalised_array = [i / data["token_length"] for i in data["token_offsets"]]
             data["normalised_offsets"] = normalised_array
+            st_dev = np.std(normalised_array)
+            print(f"Standard dev of array: {st_dev}")
         
         return offset_data
             
@@ -70,13 +73,14 @@ class wassersteinPipeline():
             if normalise_density:
                 counts = counts / counts.sum()
             
-            data["offset_bins"] = counts
+            data["offset_bins"] = counts.tolist()
         
         return offset_data
 
 
     def calculate_wasserstein_pairwise(self, offset_data):
-        """Calculate pairwise wassertein for every pair in the corpus"""
+        """Calculate pairwise wassertein for every pair in the corpus
+        uni-directional pairs - only produce them once"""
         uris = []
         pairwise_data = []
         for data_1 in tqdm(offset_data):
@@ -98,10 +102,23 @@ class wassersteinPipeline():
         
         return pairwise_data
     
-    def produce_corpus_pairwise(self, regex, bins, csv_out=None):
-
+    def prepare_norm_offsets(self, regex):
+        """Take a regex and prepare the normalised offsets for the whole
+        input corpus"""
+        
+        print(f"Preparing token offsets for all texts with regex: {regex}")
+        
         data = self.prepare_token_offsets(regex)
         data = self.normalise_offsets(data)
+        return data
+
+    def create_bins_pairwise(self, data, bins, csv_out=None):
+        """Take prepared data, create the bins and run the pairwise
+        The split functions allow us to prepare the corpus once and then
+        sample different bin sizes"""
+        
+        print(f"Creating pairwise data with bin size {bins}")
+
         data = self.build_bins(data, bins)
         pairwise_data = self.calculate_wasserstein_pairwise(data)
 
@@ -111,7 +128,34 @@ class wassersteinPipeline():
         if csv_out:
             pairwise_df.to_csv(csv_out, index=False)
         
-        return pairwise_df
+        return pairwise_df, data
+
+    def produce_corpus_pairwise(self, regex, bins, csv_out=None):
+        """Run a full wasserstein pipeline and build a pairwise csv"""
+
+        data = self.prepare_norm_offsets(regex)
+        pairwise_df, data = self.create_bins_pairwise(data, bins, csv_out=csv_out)
+        
+        return pairwise_df, data
+    
+    def survey_bin_parameters(self, regex, bins_range, csv_dir):
+        """Run a survey of the bin parameter space on the whole input corpus
+        Arguments: regex - regex to search for and create the offsets
+                   bins_range - python range object for iterating through bins e.g. range(50, 150, 50) - would
+                   try a run with bins of 50 and 100
+                   csv_dir - directory to write the pairwise csv for each pass"""
+        
+        if not os.path.exists(csv_dir):
+            os.mkdir(csv_dir)
+
+        data = self.prepare_norm_offsets(regex)
+
+        for bins in bins_range:            
+            csv_path = os.path.join(csv_dir, f"bins-{bins}")
+            self.create_bins_pairwise(data, bins, csv_out=csv_path)
+
+
+
 
                 
 

@@ -1,4 +1,5 @@
 from openiti.helper.funcs import read_text, text_cleaner
+from openiti.helper.ara import normalize_ara_heavy, tokenize
 import re
 import os
 import pandas as pd
@@ -57,6 +58,21 @@ class openitiTextFull():
     def token_text_length(self):
         """Get the full token length of the text"""
         return len(self.mARkdown_text.split())
+    
+    def return_cleaned_text(self, normalise=False):
+        """Return a text cleaned using openiti func"""
+        text = text_cleaner(self.mARkdown_text)
+        if normalise:
+            text = normalize_ara_heavy(text)
+        return text
+    
+    def return_cleaned_tokenized(self, normalise=False):
+        """Use OpenITI tokenizer on a normalised or non-normalised text"""
+        text = self.return_cleaned_text(normalise=normalise)
+        tokens, token_starts, token_ends = tokenize(text)
+        return tokens
+
+    
             
 
 class openitiCorpus():
@@ -106,9 +122,17 @@ class openitiCorpus():
         """Take the values of the path dict and return them as a list of paths"""
         return self.path_dict.values()
     
-    def fetch_path_for_book(self, book_uri):
-        """NOTE: refactor so a list of uris returns a list of paths"""
-        return self.path_dict[book_uri]
+    def fetch_path_for_books(self, book_uris):
+        """a list of uris returns a list of paths"""
+        if type(book_uris) == str:
+            return self.path_dict[book_uris]
+        elif type(book_uris) == list:
+            file_paths = []
+            for book in book_uris:
+                file_paths.append(self.path_dict[book])
+            return file_paths
+
+
 
 if __name__ == "__main__":
 
