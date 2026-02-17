@@ -5,6 +5,7 @@ import json
 import os
 import pandas as pd
 from collections import Counter
+from multiprocessing import Pool
 
 class tfidfOpenITI():
     """Take a path dict and texts in an in group and produce a tfidf token list
@@ -54,7 +55,7 @@ class tfidfOpenITI():
             # if idf score is returned then we add that token to the list 
             # (otherwise we discard it - these are tokens that tripped min or max_df when idf was computed)
             # ADD - AS test - skip anything where the score is 1 or less - this filter better applied by using max_df
-            if idf_score is not None and idf_score > 1:
+            if idf_score is not None:
                 tfidf_score = row["frequency"] * idf_score
                 row["tfidf"] = tfidf_score
                 computed_data.append(row)
@@ -139,11 +140,11 @@ class corpusIDF():
     We need this function because computing sklearn's TF-IDF on the full
     corpus would blow out memory + no need to compute every single time we
     want to get a TF-IDF score for a specific document"""
-    def __init__(self, meta_tsv, corpus_base_path, min_df=0, max_df=7000, pri_only = True, min_date=0, max_date=1500, book_list=[]):
+    def __init__(self, meta_tsv, corpus_base_path, language, min_df=0, max_df=0.8, pri_only = True, min_date=0, max_date=1500, book_list=[]):
         """Get the list of file paths to be processed into an IDF representation"""
         
         # Set the file paths
-        self.set_file_paths(meta_tsv, corpus_base_path, pri_only, min_date, max_date, book_list)
+        self.set_file_paths(meta_tsv, corpus_base_path, language, pri_only, min_date, max_date, book_list)
         self.n_docs = len(self.file_paths)
 
         # Set the parameters to run
@@ -151,11 +152,12 @@ class corpusIDF():
         self.max_df = max_df
 
 
+
     
-    def set_file_paths(self, meta_tsv, corpus_base_path, pri_only, min_date, max_date, book_list):
+    def set_file_paths(self, meta_tsv, corpus_base_path, language, pri_only, min_date, max_date, book_list):
         """Initiate an openitiCorpus object. Return a list of file paths based
         on specified parameters"""
-        corpus_obj = openitiCorpus(meta_tsv, corpus_base_path, pri_only, min_date, max_date)
+        corpus_obj = openitiCorpus(meta_tsv, corpus_base_path, language, pri_only, min_date, max_date)
 
         if len(book_list) > 0:
             self.file_paths = corpus_obj.fetch_path_for_books(book_list)
@@ -168,21 +170,33 @@ class corpusIDF():
         unique_tokens = set(openiti_tokens)
         return unique_tokens
 
-    def add_tokens_to_df(self, unique_tokens):
-        for token in unique_tokens:
-            self.dfs[token] = self.dfs.get(token, 0) + 1
+    # def add_tokens_to_df(self, unique_tokens):
+    #     for token in unique_tokens:
+    #         self.dfs[token] = self.dfs.get(token, 0) + 1
 
-    def populate_dfs(self):
+    def populate_dfs(self, file_paths, multiprocess=True):
         """Go through paths to the texts, load the texts and populate the df dict"""
         
-        self.dfs = {}
+        dfs = Counter()
         
-        for path in tqdm(self.file_paths):
-            unique_tokens = self.load_fetch_tokens(path)
-            self.add_tokens_to_df(unique_tokens)
+        if not multiprocess:
+            for path in tqdm(file_paths):
+                unique_tokens = self.load_fetch_tokens(path)
+                dfs.update(unique_tokens)
+        
+        else:
+            for path in file_paths:
+                unique_tokens = self.load_fetch_tokens(path)
+                dfs.update(unique_tokens)
+
+        return dfs
+            
 
     def apply_filters(self):
         """Using the set filters, filter the frequency dict"""
+        
+        if type(self.max_df) == float:
+            self.max_df = int(self.max_df * self.n_docs)
 
         for token, count in list(self.dfs.items()):
             if count < self.min_df or count > self.max_df:
@@ -203,7 +217,7 @@ class corpusIDF():
             "idfs": self.idfs
         }
 
-        json_data = json.dumps(data, indent=2)
+        json_data = json.dumps(data, indent=2, ensure_ascii=False)
 
         with open(json_path, "w", encoding='utf-8') as f:
             f.write(json_data)
@@ -211,8 +225,31 @@ class corpusIDF():
     def create_and_store_idf(self, json_path):
         """Run the full pipeline and export as json"""
         
-        self.populate_dfs()
+        self.dfs = dict(self.populate_dfs(self.file_paths, multiprocess=False))
         self.apply_filters()
         self.compute_idf()
         self.write_json(json_path)
+    
+
+    def create_batch(self, path_list, batch_size):
+        for i in range(0, len(path_list), batch_size):
+            yield path_list[i:i+batch_size]
+
+    def create_and_store_batched(self, json_path, batch_size, pool_size):
+        """Run create_and_store_idf but batching texts and parrlelising to deal with large corpus"""
+
+        self.dfs = Counter()
+        n_batches = math.ceil(len(self.file_paths) / batch_size)
+
+
+        with Pool(processes=pool_size) as pool:
+            for batch in tqdm(pool.imap_unordered(self.populate_dfs, self.create_batch(self.file_paths, batch_size)),
+                              total=n_batches, desc="Batches", unit="batch"):
+                self.dfs.update(batch)
+        
+        self.dfs = dict(self.dfs)
+        self.apply_filters()
+        self.compute_idf()
+        self.write_json(json_path)
+
 

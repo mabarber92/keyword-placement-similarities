@@ -78,19 +78,22 @@ class openitiTextFull():
 class openitiCorpus():
     """Take corpus base path and a metadata tsv, create paths. Perform actions
     on those texts as openITI objects"""
-    def __init__ (self, meta_tsv, base_path, pri_only = True, min_date = 0, max_date = 1500):
+    def __init__ (self, meta_tsv, base_path, language=None, pri_only = True, min_date = 0, max_date = 1500):
         """Initiate with a dictionary of URI-path pairs"""
 
-        meta_df = self.load_and_filter(meta_tsv, pri_only, min_date, max_date)
+        meta_df = self.load_and_filter(meta_tsv, language, pri_only, min_date, max_date)
 
         self.path_dict = self.build_path_dict(meta_df, base_path)
     
-    def load_and_filter(self, meta_tsv, pri_only, min_date, max_date):
-        print(max_date)
+    def load_and_filter(self, meta_tsv, language, pri_only, min_date, max_date):
+        
         meta_df = pd.read_csv(meta_tsv, sep="\t")
         
         if pri_only:
             meta_df = meta_df[meta_df["status"]=="pri"]
+        
+        if language is not None:
+            meta_df = meta_df[meta_df["language"] == language]
         
         
         meta_df = meta_df[meta_df["date"].ge(min_date)]
@@ -120,7 +123,7 @@ class openitiCorpus():
     
     def return_path_list(self):
         """Take the values of the path dict and return them as a list of paths"""
-        return self.path_dict.values()
+        return list(self.path_dict.values())
     
     def fetch_path_for_books(self, book_uris):
         """a list of uris returns a list of paths"""
