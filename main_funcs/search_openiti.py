@@ -92,7 +92,7 @@ class openitiCorpus():
         if pri_only:
             meta_df = meta_df[meta_df["status"]=="pri"]
         
-        if language is not None:
+        if language is not None and "language" in meta_df.columns:
             meta_df = meta_df[meta_df["language"] == language]
         
         
