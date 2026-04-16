@@ -125,6 +125,10 @@ class openitiCorpus():
         """Take the values of the path dict and return them as a list of paths"""
         return list(self.path_dict.values())
     
+    def return_uri_list(self):
+        """Take all the keys of the path dict and return them as a list"""
+        return list(self.path_dict.keys())
+    
     def fetch_path_for_books(self, book_uris):
         """a list of uris returns a list of paths"""
         if type(book_uris) == str:
