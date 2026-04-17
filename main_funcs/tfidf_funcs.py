@@ -30,7 +30,7 @@ class tfidfOpenITI():
         self.n_docs = data["n_docs"]
         self.idf_dict = data["idfs"]
     
-    def compute_frequencies(self, token_list, normalise='log'):
+    def compute_frequencies(self, token_list):
         """Take a list of tokens and compute the frequencies in the token set
         Returns a list of dictionaries - able to be converted into a df
         Normalises by default using log divided by total tokens can be configured to not normalise"""
@@ -41,9 +41,9 @@ class tfidfOpenITI():
         
         freq_list = []
         for token in counts.keys():
-            if normalise == "log":
+            if self.normalise == "log":
                 frequency = math.log(1 + counts[token]) / total_tokens
-            elif normalise == "freq":
+            elif self.normalise == "freq":
                 frequency = 1 + counts[token] / total_tokens
             else:
                 frequency = counts[token]
@@ -105,12 +105,13 @@ class tfidfOpenITI():
         tfidf_data = self.compute_tfidfs([text_path], top_terms=top_terms)
         self.data_out[uri] = tfidf_data
 
-    def fit_transform(self, uri_list, separate_uris=False, top_terms=None):
+    def fit_transform(self, uri_list, separate_uris=False, top_terms=None, normalise='log'):
         """Fit transform tf-idf model to a list of uris - treat all as in docs
         If separate_uris, produce a separate output for each uri
         Returns: a dict of lists of dictionaries (ready to be converted into dfs)
         {"000Author.Book": [TFIDF FREQ DATA]...}"""
         
+        self.normalise = normalise
         self.data_out = {}
         
         # Create text paths first - allowing for full corpus if all URIs passed
@@ -149,8 +150,9 @@ class tfidfOpenITI():
             path = os.path.join(dir, file_name)
             df.to_csv(path, index=False, encoding='utf-8-sig')
     
-    def csv_pipeline(self, dir, uri_list = None, separate_uris=False, top_terms=None, batch_size=100, date_filter = [0, 1500]):
+    def csv_pipeline(self, dir, uri_list = None, separate_uris=False, top_terms=None, batch_size=100, date_filter = [0, 1500], normalise="log"):
         """Run the full pipeline and write out csvs"""
+        
         
         # Get a full list of uris for corpus if no uris are given
         if uri_list is None:
@@ -163,13 +165,13 @@ class tfidfOpenITI():
         if len(uri_list) > batch_size:
             for i in tqdm(range(0, len(uri_list), batch_size)):
                 uris = uri_list[i: i + batch_size] # check this logic so we don't duplicate
-                self.fit_transform(uris, separate_uris=separate_uris, top_terms=top_terms)
+                self.fit_transform(uris, separate_uris=separate_uris, top_terms=top_terms, normalise=normalise)
                 self.write_csvs(dir)
 
 
         # Else run all at once
         else:
-            self.fit_transform(uri_list, separate_uris=separate_uris, top_terms=top_terms)
+            self.fit_transform(uri_list, separate_uris=separate_uris, top_terms=top_terms, normalise=normalise)
             self.write_csvs(dir)
 
     

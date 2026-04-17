@@ -5,7 +5,7 @@ from scipy.spatial.distance import cosine
 from tqdm import tqdm
 import numpy as np
 
-class tdidfDfs():
+class tdidfSimilarity():
     def __init__(self, csv_dir):
         """Take a directory of csvs containing tfidf weights and use them to
         compare tfidf between documents"""
@@ -120,7 +120,7 @@ class tdidfDfs():
 if __name__ == "__main__":
     tfidf_dir = "../data/tfidf_tests"
     
-    tfidf_dfs = tdidfDfs(tfidf_dir)
+    tfidf_dfs = tdidfSimilarity(tfidf_dir)
     tfidf_dfs.one_to_all_csv("0310Tabari.Tarikh", "../data/cosine_tests/Tabari_cosine.csv")
 
     tfidf_dfs.compare_all_pairwise("../data/cosine_tests/")
