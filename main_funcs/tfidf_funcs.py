@@ -11,16 +11,20 @@ class tfidfOpenITI():
     """Take a path dict and texts in an in group and produce a tfidf token list
     where the tf is the frequency in the in_texts (one or many - if multiple texts we concatenate them) and idf is the number
     of books in the corpus that mention the term - using a idf json"""
-    def __init__(self, meta_tsv, corpus_base_path, idf_json_path, multiprocess=False):
+    def __init__(self, meta_tsv, corpus_base_path, idf_json_path, multiprocess=False, pool_size=10):
         
         # Load the idf data
         self.load_idf_data(idf_json_path)
 
         # Get the paths to the in_texts
         self.openiti_corpus = openitiCorpus(meta_tsv, corpus_base_path)
-
+        
+        self.meta_tsv = meta_tsv
+        self.corpus_base_path = corpus_base_path
+        
         # Set multiprocessing
         self.multiprocess = multiprocess
+        self.pool_size = pool_size
     
     def load_idf_data(self, idf_json_path):
 
@@ -101,9 +105,13 @@ class tfidfOpenITI():
 
         return tfidf_data
 
-    def _path_to_tfidf(self, text_path, top_terms=None):
+    def _path_to_tfidf(self, text_path):
+        top_terms = self.top_terms
+        uri = ".".join(text_path.split("/")[-1].split(".")[:2])
         tfidf_data = self.compute_tfidfs([text_path], top_terms=top_terms)
-        self.data_out[uri] = tfidf_data
+        return (uri, tfidf_data)
+        
+        
 
     def fit_transform(self, uri_list, separate_uris=False, top_terms=None, normalise='log'):
         """Fit transform tf-idf model to a list of uris - treat all as in docs
@@ -112,6 +120,7 @@ class tfidfOpenITI():
         {"000Author.Book": [TFIDF FREQ DATA]...}"""
         
         self.normalise = normalise
+        self.top_terms = top_terms
         self.data_out = {}
         
         # Create text paths first - allowing for full corpus if all URIs passed
@@ -123,17 +132,21 @@ class tfidfOpenITI():
         # Run book-wise TF-IDF
         if not separate_uris:
             
-            tfidf_data = self.compute_tfidfs(text_paths, top_terms=top_terms)
+            tfidf_data = self.compute_tfidfs(text_paths)
             self.data_out[f"{len(uri_list)}-books-tfidf"] = tfidf_data
         
         else:
             # Add ability to multiprocess here
             if self.multiprocess:
-                with Pool(processes=pool_size) as pool:
-                    pool.imap_unordered(self._path_to_tfidf, zip([top_terms]*len(text_paths), text_paths))
+                with Pool(processes=self.pool_size) as pool:
+                    results = pool.map(self._path_to_tfidf, text_paths)
+                for uri, tfidf_data in results:
+                    self.data_out[uri] = tfidf_data
             else:
                 for text_path in text_paths:
-                    self._path_to_tfidf(text_path, top_terms)
+                    uri, tfidf_data = self._path_to_tfidf(text_path)
+                    self.data_out[uri] = tfidf_data
+            
                     
 
         
@@ -150,22 +163,23 @@ class tfidfOpenITI():
             path = os.path.join(dir, file_name)
             df.to_csv(path, index=False, encoding='utf-8-sig')
     
-    def csv_pipeline(self, dir, uri_list = None, separate_uris=False, top_terms=None, batch_size=100, date_filter = [0, 1500], normalise="log"):
+    def csv_pipeline(self, dir, uri_list = None, separate_uris=True, top_terms=None, batch_size=100, date_filter = [0, 1500], normalise="log"):
         """Run the full pipeline and write out csvs"""
         
         
         # Get a full list of uris for corpus if no uris are given
         if uri_list is None:
             if date_filter != [0, 1500]:
-                self.openiti_corpus = openitiCorpus(min_date = date_filter[0], max_date=date_filter[1])
+                self.openiti_corpus = openitiCorpus(self.meta_tsv, self.corpus_base_path, min_date = date_filter[0], max_date=date_filter[1])
             uri_list = self.openiti_corpus.return_uri_list()
 
         # If URIs < batch_size run in batches to avoid memory blowout
-        # If we'd like to pool at batch level, we'll need to change how we're changing internal var - for moment we cool pool within fit_transform
-        if len(uri_list) > batch_size:
+        # If we'd like to pool at batch level, we'll need to change how we're changing internal var - for moment we cool pool within fit_transform - only batch if we've got separate uris otherwise get unwanted splitting
+        if len(uri_list) > batch_size and separate_uris:
             for i in tqdm(range(0, len(uri_list), batch_size)):
                 uris = uri_list[i: i + batch_size] # check this logic so we don't duplicate
                 self.fit_transform(uris, separate_uris=separate_uris, top_terms=top_terms, normalise=normalise)
+                
                 self.write_csvs(dir)
 
 
@@ -279,7 +293,7 @@ class corpusIDF():
         for i in range(0, len(path_list), batch_size):
             yield path_list[i:i+batch_size]
 
-    def create_and_store_batched(self, json_path, batch_size, pool_size):
+    def create_and_store_batched(self, json_path, batch_size=100, pool_size=10):
         """Run create_and_store_idf but batching texts and parrlelising to deal with large corpus"""
 
         self.dfs = Counter()

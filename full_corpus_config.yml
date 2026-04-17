@@ -1,17 +1,21 @@
-openiti_path:
-meta_path:
-out_path:
-min_date:
-max_date:
+openiti_path: C:/Users/Mathew.Barber/Documents/OpenITI/corpus_2025_1_9
+meta_path: C:/Users/Mathew.Barber/Documents/OpenITI/OpenITI_metadata_2025-1-9.tsv
+out_path: data/full_corpus_runs/750_850_log_norm/
+min_date: 750
+max_date: 850
 pipeline_stages:
-  - full_corpus_idf:
-    - overwrite: false
-    - min_df: 0
-    - max_df: 0.8
-    - language: ara
-  - tfidf:
-    - overwrite: false
-    - normalise: log # options: log freq false
-  - cosine_similarity:
-    - overwrite: false
+  full_corpus_idf:
+    overwrite: false
+    min_df: 0
+    max_df: 0.8
+    language: ara
+  tfidf:
+    overwrite: false
+    normalise: log # options: log freq false
+  cosine_similarity:
+    overwrite: true
+    book_focus:
+    -  0845Maqrizi.IghathaUmma
+    -  0845Maqrizi.Muqaffa
+    -  0845Maqrizi.Suluk
   
