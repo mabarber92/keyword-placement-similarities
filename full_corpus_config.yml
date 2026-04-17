@@ -10,7 +10,7 @@ pipeline_stages:
     max_df: 0.8
     language: ara
   tfidf:
-    overwrite: false
+    overwrite: true
     normalise: log # options: log freq false
   cosine_similarity:
     overwrite: true

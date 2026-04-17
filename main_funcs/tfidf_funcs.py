@@ -61,9 +61,9 @@ class tfidfOpenITI():
         look up in the idf data and use that to compute tf-idf. Add as 
         a new item to the dictionary in the row"""
 
-        print("Calculating tfidf")
+        
         computed_data = []
-        for row in tqdm(freq_list):
+        for row in freq_list:
             token = row["token"]
             idf_score = self.idf_dict.get(token, None)
 
@@ -140,10 +140,11 @@ class tfidfOpenITI():
             if self.multiprocess:
                 with Pool(processes=self.pool_size) as pool:
                     results = pool.map(self._path_to_tfidf, text_paths)
-                for uri, tfidf_data in results:
+                print("Post-procesing batch")
+                for uri, tfidf_data in tqdm(results):
                     self.data_out[uri] = tfidf_data
             else:
-                for text_path in text_paths:
+                for text_path in tqdm(text_paths):
                     uri, tfidf_data = self._path_to_tfidf(text_path)
                     self.data_out[uri] = tfidf_data
             
