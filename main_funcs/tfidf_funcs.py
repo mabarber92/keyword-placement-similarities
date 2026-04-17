@@ -39,7 +39,7 @@ class tfidfOpenITI():
         Returns a list of dictionaries - able to be converted into a df
         Normalises by default using log divided by total tokens can be configured to not normalise"""
         
-        print("Counting frequencies")
+        
         total_tokens = len(token_list)
         counts = Counter(token_list)
         
@@ -119,6 +119,7 @@ class tfidfOpenITI():
         Returns: a dict of lists of dictionaries (ready to be converted into dfs)
         {"000Author.Book": [TFIDF FREQ DATA]...}"""
         
+       
         self.normalise = normalise
         self.top_terms = top_terms
         self.data_out = {}
@@ -139,9 +140,13 @@ class tfidfOpenITI():
             # Add ability to multiprocess here
             if self.multiprocess:
                 with Pool(processes=self.pool_size) as pool:
-                    results = pool.map(self._path_to_tfidf, text_paths)
-                print("Post-procesing batch")
-                for uri, tfidf_data in tqdm(results):
+                    results = list(tqdm(
+                        pool.imap(self._path_to_tfidf, text_paths),
+                        total=len(text_paths),
+                        desc="Processing texts"
+                    ))
+                
+                for uri, tfidf_data in results:
                     self.data_out[uri] = tfidf_data
             else:
                 for text_path in tqdm(text_paths):
