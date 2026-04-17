@@ -149,11 +149,13 @@ class tfidfOpenITI():
             path = os.path.join(dir, file_name)
             df.to_csv(path, index=False, encoding='utf-8-sig')
     
-    def csv_pipeline(self, dir, uri_list = None, separate_uris=False, top_terms=None, batch_size=100):
+    def csv_pipeline(self, dir, uri_list = None, separate_uris=False, top_terms=None, batch_size=100, date_filter = [0, 1500]):
         """Run the full pipeline and write out csvs"""
         
         # Get a full list of uris for corpus if no uris are given
         if uri_list is None:
+            if date_filter != [0, 1500]:
+                self.openiti_corpus = openitiCorpus(min_date = date_filter[0], max_date=date_filter[1])
             uri_list = self.openiti_corpus.return_uri_list()
 
         # If URIs < batch_size run in batches to avoid memory blowout
