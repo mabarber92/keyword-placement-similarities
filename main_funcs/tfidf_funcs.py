@@ -11,6 +11,7 @@ from transformers import AutoTokenizer
 def resolve_BPE_tokenizer(BPE_tokenizer):
     """Shared function for initialising the tokenizer - shared for easier maintanance"""
     if BPE_tokenizer is not None:
+        print("Using BPE tokenizer")
         tokenizer = AutoTokenizer.from_pretrained(BPE_tokenizer)
         BPE_tokens = True
     else:
