@@ -13,6 +13,8 @@ def resolve_BPE_tokenizer(BPE_tokenizer):
     if BPE_tokenizer is not None:
         print("Using BPE tokenizer")
         tokenizer = AutoTokenizer.from_pretrained(BPE_tokenizer)
+        # Set a model max length to suppress warnings about exceeding model size
+        tokenizer.model_max_length = 20_000_000
         BPE_tokens = True
     else:
         tokenizer = None

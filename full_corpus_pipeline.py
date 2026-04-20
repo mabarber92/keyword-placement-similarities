@@ -29,6 +29,11 @@ class tfidfSimilarityPipeline():
         self.meta_path = data["meta_path"]
 
         self.out_path = data["out_path"]
+
+        if "BPE_tokenizer" in data.keys():
+            self.BPE_tokenizer = data["BPE_tokenizer"]
+        else:
+            self.BPE_tokenizer = None
     
     def _check_create_path(self, path, mkdir=True):
         if not os.path.exists(path):
@@ -73,7 +78,7 @@ class tfidfSimilarityPipeline():
             self.idf_path = out_path
             
             if self._qualify_run_status(out_path, settings["overwrite"], mkdir=False):
-                corpus_idf = corpusIDF(self.meta_path, self.openiti_path, settings["language"], min_date = self.min_date, max_date=self.max_date)
+                corpus_idf = corpusIDF(self.meta_path, self.openiti_path, settings["language"], min_date = self.min_date, max_date=self.max_date, BPE_tokenizer=self.BPE_tokenizer)
                 corpus_idf.create_and_store_batched(out_path)
             
         if "tfidf" in self.pipeline_components.keys():
@@ -92,7 +97,7 @@ class tfidfSimilarityPipeline():
             self.tfidf_dir = out_path
 
             if self._qualify_run_status(out_path, settings["overwrite"]):
-                tfidf_obj = tfidfOpenITI(self.meta_path, self.openiti_path, self.idf_path, multiprocess=True)
+                tfidf_obj = tfidfOpenITI(self.meta_path, self.openiti_path, self.idf_path, multiprocess=True,  BPE_tokenizer=self.BPE_tokenizer)
                 tfidf_obj.csv_pipeline(out_path, separate_uris=True, date_filter=[self.min_date, self.max_date], normalise=settings["normalise"])
         
         if "cosine_similarity" in self.pipeline_components.keys():
