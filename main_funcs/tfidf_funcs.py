@@ -38,6 +38,8 @@ class tfidfOpenITI():
         # Set multiprocessing
         self.multiprocess = multiprocess
         self.pool_size = pool_size
+
+        self.tokenizer, self.BPE_tokens = resolve_BPE_tokenizer(BPE_tokenizer)
     
     def load_idf_data(self, idf_json_path):
 
@@ -100,13 +102,17 @@ class tfidfOpenITI():
         else:
             return tfidf_data
 
-    def compute_tfidfs(self, text_paths, top_terms=None):
+    def compute_tfidfs(self, text_paths, top_terms=None, normalise=True):
         """Compute the document frequencies for supplied text paths"""
         
         token_list = []
         for path in text_paths:
             openiti_obj = openitiTextFull(path)
-            tokens = openiti_obj.return_cleaned_tokenized(normalise=True)
+            # If BPE_tokens - then we use the BPE tokenizer - else use the openITI tokenizer
+            if self.BPE_tokens:
+                tokens = openiti_obj.return_BPE_tokens(tokenizer=self.tokenizer, normalise=normalise)        
+            else:
+                tokens = openiti_obj.return_cleaned_tokenized(normalise=normalise)
             token_list.extend(tokens)
         
         # Calculate frequency and use that to calculate tf-idf
