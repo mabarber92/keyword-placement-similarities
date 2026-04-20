@@ -164,11 +164,11 @@ class openitiCorpus():
 
 if __name__ == "__main__":
 
-    meta_path = "D:/Corpus Stats/2023/OpenITI_metadata_2023-1-8.csv"
-    base_path = "D:/OpenITI Corpus/corpus_2023_1_8"
+    base_path = "C:/Users/Mathew.Barber/Documents/OpenITI/corpus_2025_1_9"
+    meta_path = "C:/Users/Mathew.Barber/Documents/OpenITI/OpenITI_metadata_2025-1-9.tsv"
     test_regex = r"غلاء|محن"
     book_uri = "0845Maqrizi.IghathaUmma"
 
-    text_path = openitiCorpus(meta_path, base_path).fetch_path_for_book(book_uri)
+    text_path = openitiCorpus(meta_path, base_path).fetch_path_for_books(book_uri)
     openiti_text = openitiTextFull(text_path)
-    print(openiti_text.finditer_tokens(test_regex))
+    print(openiti_text.return_BPE_tokens())
