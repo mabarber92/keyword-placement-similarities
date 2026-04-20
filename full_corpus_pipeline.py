@@ -37,6 +37,8 @@ class tfidfSimilarityPipeline():
             self.BPE_tokenizer = None
         
         # Create a copy of the config in the destination - to keep a record of settings used
+        if not os.path.exists(self.out_path):
+            os.mkdir(self.out_path)
         stored_config = os.path.join(self.out_path, "run_config.yml")
         shutil.copyfile(config, stored_config)
     
