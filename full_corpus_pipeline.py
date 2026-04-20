@@ -2,6 +2,7 @@ from main_funcs.tfidf_funcs import corpusIDF, tfidfOpenITI
 from main_funcs.compare_tfidf import tfidfSimilarity
 import yaml
 import os
+import shutil
 
 CONFIG = "./full_corpus_config.yml"
 
@@ -34,6 +35,10 @@ class tfidfSimilarityPipeline():
             self.BPE_tokenizer = data["BPE_tokenizer"]
         else:
             self.BPE_tokenizer = None
+        
+        # Create a copy of the config in the destination - to keep a record of settings used
+        stored_config = os.path.join(self.out_path, "run_config.yml")
+        shutil.copyfile(config, stored_config)
     
     def _check_create_path(self, path, mkdir=True):
         if not os.path.exists(path):
