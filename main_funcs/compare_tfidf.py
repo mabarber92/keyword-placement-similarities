@@ -88,6 +88,8 @@ class tfidfSimilarity():
 
         # Compute similarities
         data_out = []
+
+        # TODO - Add ability to parallelise this
         for uri in tqdm(comparison_list):
             similarity = self.compare_weights(main_uri, uri)
             data_out.append({"b1": main_uri, "b2": uri, "similarity": similarity})
