@@ -8,16 +8,23 @@ from collections import Counter
 from multiprocessing import Pool
 from transformers import AutoTokenizer
 
-def initiate_tokenizer(model):
+def resolve_BPE_tokenizer(BPE_tokenizer):
     """Shared function for initialising the tokenizer - shared for easier maintanance"""
-    return AutoTokenizer.from_pretrained(model)
+    if BPE_tokenizer is not None:
+        tokenizer = AutoTokenizer.from_pretrained(BPE_tokenizer)
+        BPE_tokens = True
+    else:
+        tokenizer = None
+        BPE_tokens = False
+        
+    return tokenizer, BPE_tokens
 
 
 class tfidfOpenITI():
     """Take a path dict and texts in an in group and produce a tfidf token list
     where the tf is the frequency in the in_texts (one or many - if multiple texts we concatenate them) and idf is the number
     of books in the corpus that mention the term - using a idf json"""
-    def __init__(self, meta_tsv, corpus_base_path, idf_json_path, multiprocess=False, pool_size=10):
+    def __init__(self, meta_tsv, corpus_base_path, idf_json_path, multiprocess=False, pool_size=10, BPE_tokenizer=None):
         
         # Load the idf data
         self.load_idf_data(idf_json_path)
@@ -222,12 +229,9 @@ class corpusIDF():
         self.min_df = min_df
         self.max_df = max_df
 
-        # If we have a BPE tokenizer - set BPE tokenization to true and create the tokenizer
-        if BPE_tokenizer is not None:
-            self.tokenizer = initiate_tokenizer(BPE_tokenizer)
-            self.BPE_tokens = True
-        else:
-            self.BPE_tokens = False
+        # If we have a BPE tokenizer - set BPE tokenization to true and create the tokenizer - using inbuilt shared func
+        self.tokenizer, self.BPE_tokens = resolve_BPE_tokenizer(BPE_tokenizer)
+
         
 
 
