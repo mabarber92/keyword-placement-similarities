@@ -6,6 +6,12 @@ import os
 import pandas as pd
 from collections import Counter
 from multiprocessing import Pool
+from transformers import AutoTokenizer
+
+def initiate_tokenizer(model):
+    """Shared function for initialising the tokenizer - shared for easier maintanance"""
+    return AutoTokenizer.from_pretrained(model)
+
 
 class tfidfOpenITI():
     """Take a path dict and texts in an in group and produce a tfidf token list
@@ -204,8 +210,9 @@ class corpusIDF():
     We need this function because computing sklearn's TF-IDF on the full
     corpus would blow out memory + no need to compute every single time we
     want to get a TF-IDF score for a specific document"""
-    def __init__(self, meta_tsv, corpus_base_path, language, min_df=0, max_df=0.8, pri_only = True, min_date=0, max_date=1500, book_list=[]):
-        """Get the list of file paths to be processed into an IDF representation"""
+    def __init__(self, meta_tsv, corpus_base_path, language, min_df=0, max_df=0.8, pri_only = True, min_date=0, max_date=1500, book_list=[], BPE_tokenizer=None):
+        """Get the list of file paths to be processed into an IDF representation
+        BPE_tokenizer is a huggingface path to a transformers model to use for tokenization"""
         
         # Set the file paths
         self.set_file_paths(meta_tsv, corpus_base_path, language, pri_only, min_date, max_date, book_list)
@@ -215,6 +222,13 @@ class corpusIDF():
         self.min_df = min_df
         self.max_df = max_df
 
+        # If we have a BPE tokenizer - set BPE tokenization to true and create the tokenizer
+        if BPE_tokenizer is not None:
+            self.tokenizer = initiate_tokenizer(BPE_tokenizer)
+            self.BPE_tokens = True
+        else:
+            self.BPE_tokens = False
+        
 
 
     
@@ -230,7 +244,11 @@ class corpusIDF():
 
     def load_fetch_tokens(self, text_path, normalise=True):
         """Take a path to an openITI text and load it as a set of unique tokens"""
-        openiti_tokens = openitiTextFull(text_path).return_cleaned_tokenized(normalise=normalise)
+        openiti_text = openitiTextFull(text_path)
+        if self.BPE_tokens:
+            openiti_tokens = openiti_text.return_BPE_tokens(tokenizer=self.tokenizer, normalise=normalise)
+        else:
+            openiti_tokens = openiti_text.return_cleaned_tokenized(normalise=normalise)
         unique_tokens = set(openiti_tokens)
         return unique_tokens
 
