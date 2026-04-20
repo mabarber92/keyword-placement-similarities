@@ -1,12 +1,13 @@
 from openiti.helper.funcs import read_text, text_cleaner
 from openiti.helper.ara import normalize_ara_heavy, tokenize
+from transformers import AutoTokenizer
 import re
 import os
 import pandas as pd
 
 class openitiTextFull():
     """A class for handling an OpenITI text as a full text - primarily for performing searches"""
-    def __init__ (self, file_path, clean=False):
+    def __init__ (self, file_path, clean=False, BPE_model= "aubmindlab/bert-base-arabertv2"):
         """Read the text into the object using a file path"""
         
         # Initiate the ms_pattern to be used across the class
@@ -20,6 +21,9 @@ class openitiTextFull():
 
         if clean:
             self.mARkdown_text = text_cleaner(self.mARkdown_text)
+
+        # Set the BPE model in case user needs to use it
+        self.BPE_model = BPE_model
     
     def create_token_mapping(self, token_regex=r"\W\w+"):
         """For whole text create a mapping for the character start point of each token in the text"""
@@ -71,8 +75,25 @@ class openitiTextFull():
         text = self.return_cleaned_text(normalise=normalise)
         tokens, token_starts, token_ends = tokenize(text)
         return tokens
-
     
+    def return_BPE_tokens(self, tokenizer=None, normalise=False):
+        """Return text as BPE tokens after cleaning. Normalise if set to true
+        Returns: list of BPE tokens"""
+        text = self.return_cleaned_text(normalise=normalise)
+        
+        # If no tokenizer is given - load the tokenizer from scratch - to allow better batch processing
+        if tokenizer is None:
+            tokenizer = self.load_tokenizer()
+
+        # Run tokenizer - setting truncation to false - so that all tokens are returned
+        tokens = tokenizer.tokenize(text, truncation = False)
+        return tokens
+
+    def load_tokenizer(self):
+        """Use internal model to load the tokenizer"""
+        print(f"Loading tokenizer from scratch using {self.BPE_model}")
+        tokenizer = AutoTokenizer.from_pretrained(self.BPE_model)
+        return tokenizer
             
 
 class openitiCorpus():
