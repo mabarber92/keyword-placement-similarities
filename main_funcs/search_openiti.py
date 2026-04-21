@@ -76,7 +76,7 @@ class openitiTextFull():
         tokens, token_starts, token_ends = tokenize(text)
         return tokens
     
-    def return_BPE_tokens(self, tokenizer=None, normalise=False, remove_prefixes=True):
+    def return_BPE_tokens(self, tokenizer=None, normalise=False, remove_prefixes=False, prefix = "##"):
         """Return text as BPE tokens after cleaning. Normalise if set to true
         Returns: list of BPE tokens"""
         text = self.return_cleaned_text(normalise=normalise)
@@ -88,7 +88,7 @@ class openitiTextFull():
         # Run tokenizer - setting truncation to false - so that all tokens are returned
         tokens = tokenizer.tokenize(text, truncation = False)
         if remove_prefixes:
-            tokens = tokenizer.convert_tokens_to_string(tokens)
+            tokens = [t.replace(prefix, "") for t in tokens]
         return tokens
 
     def load_tokenizer(self):

@@ -1,21 +1,20 @@
 openiti_path: C:/Users/Mathew.Barber/Documents/OpenITI/corpus_2025_1_9
 meta_path: C:/Users/Mathew.Barber/Documents/OpenITI/OpenITI_metadata_2025-1-9.tsv
-out_path: data/full_corpus_runs/full_corpus_BPE_toks/
-min_date: 0
-max_date: 1000
+out_path: data/full_corpus_runs/800_850_BPE_toks_noprefix/
+min_date: 800
+max_date: 850
 BPE_tokenizer: aubmindlab/bert-base-arabertv2
 pipeline_stages:
   full_corpus_idf:
-    overwrite: false
+    overwrite: true
     min_df: 0
     max_df: 0.8
     language: ara
   tfidf:
-    overwrite: false
+    overwrite: true
     normalise: log # options: log freq false
   cosine_similarity:
-    overwrite: false
+    overwrite: true
     book_focus:
     -  0845Maqrizi.IghathaUmma
     -  0845Maqrizi.Muqaffa
-    -  0310Tabari.Tarikh
