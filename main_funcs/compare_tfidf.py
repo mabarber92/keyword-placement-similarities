@@ -4,14 +4,19 @@ import pandas as pd
 from scipy.spatial.distance import cosine
 from tqdm import tqdm
 import numpy as np
+from multiprocessing import Pool
 
 class tfidfSimilarity():
-    def __init__(self, csv_dir):
+    def __init__(self, csv_dir, multiprocess=False, pool_size=10):
         """Take a directory of csvs containing tfidf weights and use them to
         compare tfidf between documents"""
 
         # Init the dictionary for performing the queries and comparisons
         self._uri_csv_dict(csv_dir)
+
+        # Setup multiprocessing
+        self.multiprocess = multiprocess
+        self.pool_size=pool_size
 
         
 
@@ -115,7 +120,25 @@ class tfidfSimilarity():
 
         return similarity, top_tokens
     
-    def compare_one_to_all(self, main_uri, top_tok_joiner = "_"):
+    def process_uri_pair(self, uri_pair, top_tok_joiner = "_"):
+        """Process a uri pair into a row for a dataframe documenting similarity"""
+        uri1, uri2 = uri_pair[0], uri_pair[1]
+        similarity, top_tokens = self.compare_weights(uri1, uri2)
+        data_dict = {"b1": uri1, 
+                    "b2": uri2,
+                    "similarity": similarity}
+        
+        if top_tokens is not None:
+            # Join the token list using the specified joiner
+            top_tokens = top_tok_joiner.join(top_tokens)
+            data_dict[f"top_{self.top_n_tokens}_tokens"] = top_tokens
+        
+        return data_dict
+            
+
+
+
+    def compare_one_to_all(self, main_uri):
         """Compare a main_uri with all of the other uris in the supplied directory"""
 
         print(f"Running similarities for {main_uri}")
@@ -124,21 +147,32 @@ class tfidfSimilarity():
         comparison_list.remove(main_uri)
 
         # Compute similarities
-        data_out = []
+        
 
-        # TODO - Add ability to parallelise this
-        for uri in tqdm(comparison_list):
-            similarity, top_tokens = self.compare_weights(main_uri, uri)
-            data_dict = {"b1": main_uri, 
-                        "b2": uri,
-                        "similarity": similarity}
+        if self.multiprocess:
+            uri_pairs = zip([main_uri]*len(comparison_list), comparison_list)
+            with Pool(processes=self.pool_size) as pool:
+                data_out = list(tqdm(
+                    pool.imap(self.process_uri_pair, uri_pairs),
+                    total=len(comparison_list),
+                    desc=f"Computing cosine similarities for {main_uri}"
+                ))
             
-            if top_tokens is not None:
-                # Join the token list using the specified joiner
-                top_tokens = top_tok_joiner.join(top_tokens)
-                data_dict[f"top_{self.top_n_tokens}_tokens"] = top_tokens
-            
-            data_out.append(data_dict)
+        
+        else:
+            data_out = []
+            for uri in tqdm(comparison_list):
+                similarity, top_tokens = self.compare_weights((main_uri, uri))
+                data_dict = {"b1": main_uri, 
+                            "b2": uri,
+                            "similarity": similarity}
+                
+                if top_tokens is not None:
+                    # Join the token list using the specified joiner
+                    top_tokens = top_tok_joiner.join(top_tokens)
+                    data_dict[f"top_{self.top_n_tokens}_tokens"] = top_tokens
+                
+                data_out.append(data_dict)
         
         # Transform to df and sort
         data_out = pd.DataFrame(data_out)
@@ -172,8 +206,8 @@ class tfidfSimilarity():
 if __name__ == "__main__":
     tfidf_dir = "../data/full_corpus_runs/800_850_BPE_toks_noprefix/tfidf_csvs"
     
-    tfidf_dfs = tfidfSimilarity(tfidf_dir)
-    print(tfidf_dfs.fetch_top_shared_toks("0845Maqrizi.IghathaUmma", "0814IbnZayyat.KawakibSayyara"))
+    tfidf_dfs = tfidfSimilarity(tfidf_dir, multiprocess=True)
+    # print(tfidf_dfs.fetch_top_shared_toks("0845Maqrizi.IghathaUmma", "0814IbnZayyat.KawakibSayyara"))
     
     tfidf_dfs.one_to_all_csv("0845Maqrizi.IghathaUmma", "../data/cosine_tests/Ighatha_cosine.csv", top_n_tokens=15)
 
