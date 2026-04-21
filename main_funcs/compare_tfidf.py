@@ -65,9 +65,9 @@ class tfidfSimilarity():
         token_contributions = {token: contributions[i] for i, token in enumerate(token_list)}
         # Sort and take top_n
         top_n = list(sorted(token_contributions.items(), key=lambda x: x[1], reverse=True))[:top_n]
-        print(top_n)
+        
         top_n = [tok[0] for tok in top_n]
-        print(top_n)
+        
         
         return top_n
 
@@ -93,8 +93,12 @@ class tfidfSimilarity():
 
         return aligned_weights, all_tokens
 
-    
-    
+    def fetch_top_shared_toks(self, t1, t2, top_n=20):
+        """For a pair of URIs in the directory return the shared tokens"""
+        aligned_weights, all_tokens = self._align_weights(t1, t2)
+        top_tokens = self._identify_top_tokens(aligned_weights, all_tokens, top_n)
+        return top_tokens
+
     def compare_weights(self, t1, t2):
         """Take two uris of texts and compare the tfidf weights for the tokens"""
 
@@ -131,7 +135,7 @@ class tfidfSimilarity():
             
             if top_tokens is not None:
                 # Join the token list using the specified joiner
-                top_tokens = ",".join(top_tokens)
+                top_tokens = top_tok_joiner.join(top_tokens)
                 data_dict[f"top_{self.top_n_tokens}_tokens"] = top_tokens
             
             data_out.append(data_dict)
@@ -166,9 +170,11 @@ class tfidfSimilarity():
             self.one_to_all_csv(uri, csv_path)
 
 if __name__ == "__main__":
-    tfidf_dir = "../data/tfidf_tests"
+    tfidf_dir = "../data/full_corpus_runs/800_850_BPE_toks_noprefix/tfidf_csvs"
     
     tfidf_dfs = tfidfSimilarity(tfidf_dir)
-    tfidf_dfs.one_to_all_csv("0310Tabari.Tarikh", "../data/cosine_tests/Tabari_cosine.csv", top_n_tokens=10)
+    print(tfidf_dfs.fetch_top_shared_toks("0845Maqrizi.IghathaUmma", "0814IbnZayyat.KawakibSayyara"))
+    
+    tfidf_dfs.one_to_all_csv("0845Maqrizi.IghathaUmma", "../data/cosine_tests/Ighatha_cosine.csv", top_n_tokens=15)
 
-    tfidf_dfs.compare_all_pairwise("../data/cosine_tests/", top_n_tokens=10)
+    # tfidf_dfs.compare_all_pairwise("../data/cosine_tests/", top_n_tokens=10)
