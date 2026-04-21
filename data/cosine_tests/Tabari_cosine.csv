@@ -1,3 +1,3 @@
-b1,b2,similarity
-0310Tabari.Tarikh,0421Miskawayh.HikmaKhalida,0.3171999349884439
-0310Tabari.Tarikh,0630IbnAthirCizzDin.Kamil,0.2944317619092758
+b1,b2,similarity,top_10_tokens
+0310Tabari.Tarikh,0421Miskawayh.HikmaKhalida,0.3171999349884439,"ص,حدثني,د,ج,ا,ف,فيف,ط,ابا,ناقصيه"
+0310Tabari.Tarikh,0630IbnAthirCizzDin.Kamil,0.2944317619092758,"وفيها,اصحابه,ابا,الكوفه,خراسان,الحسين,سعد,فخرج,عيسي,زياد"

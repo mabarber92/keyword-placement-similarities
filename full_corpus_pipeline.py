@@ -36,6 +36,8 @@ class tfidfSimilarityPipeline():
         else:
             self.BPE_tokenizer = None
         
+        
+        
         # Create a copy of the config in the destination - to keep a record of settings used
         if not os.path.exists(self.out_path):
             os.mkdir(self.out_path)
@@ -120,14 +122,17 @@ class tfidfSimilarityPipeline():
             out_path = os.path.join(self.out_path, "pairwise_similarities")
 
             if self._qualify_run_status(out_path, settings["overwrite"]):
-                similarity_calculator = tfidfSimilarity(self.tfidf_dir)
-
+                similarity_calculator = tfidfSimilarity(self.tfidf_dir, multiprocess=True)
+                if "top_n_tokens" in settings.keys():
+                    top_n_tokens = settings["top_n_tokens"]
+                else:
+                    top_n_tokes = None
                 if settings["book_focus"] is not None or settings["book_focus"] != []:
                     for book in settings["book_focus"]:
                         csv_path = os.path.join(out_path, f"{book}-similarities.csv")
-                        similarity_calculator.one_to_all_csv(book, csv_path)
+                        similarity_calculator.one_to_all_csv(book, csv_path, top_n_tokens=top_n_tokens)
                 else:
-                    similarity_calculator.compare_all_pairwise(out_path)
+                    similarity_calculator.compare_all_pairwise(out_path, top_n_tokens=top_n_tokens)
         
         print("Done!")
 

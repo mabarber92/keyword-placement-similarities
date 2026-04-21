@@ -6,15 +6,16 @@ max_date: 850
 BPE_tokenizer: aubmindlab/bert-base-arabertv2
 pipeline_stages:
   full_corpus_idf:
-    overwrite: true
+    overwrite: false
     min_df: 0
     max_df: 0.8
     language: ara
   tfidf:
-    overwrite: true
+    overwrite: false
     normalise: log # options: log freq false
   cosine_similarity:
     overwrite: true
+    top_n_tokens: 15
     book_focus:
     -  0845Maqrizi.IghathaUmma
     -  0845Maqrizi.Muqaffa
