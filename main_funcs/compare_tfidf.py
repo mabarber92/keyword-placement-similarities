@@ -13,6 +13,8 @@ class tfidfSimilarity():
         # Init the dictionary for performing the queries and comparisons
         self._uri_csv_dict(csv_dir)
 
+        
+
     
     def _uri_csv_dict(self, csv_dir):
         """Use a logic to split the csvs into a dict {uri: csv_path}"""
@@ -39,11 +41,35 @@ class tfidfSimilarity():
     def _load_csv_as_dict(self, text_uri):
         """Load a csv from the path_dict based on specified uri
         Transform to key value pairs where token is key and value is tfidf score"""
+        if text_uri not in self.path_dict.keys():
+            print(f"{text_uri} not found in supplied directory")
+            exit()
         dict_list = pd.read_csv(self.path_dict[text_uri])[["token", "tfidf"]].to_dict("records")
         data = {}
         for row in dict_list:
             data[row["token"]] = row["tfidf"]
         return data
+
+    def _identify_top_tokens(self, weight_pairs, token_list, top_n=10):
+        """Take aligned vectors and corresponding token list and get a list of top shared tokens"""
+        
+        # Convert to numpy vectors
+        vec1, vec2 = np.array(weight_pairs[0]), np.array(weight_pairs[1])
+        # Normalise the vectors
+        norm1, norm2 = np.linalg.norm(vec1), np.linalg.norm(vec2)
+
+        # Get a contribution for each token as a product of the two normalised scores
+        contributions = (vec1/norm1) * (vec2/norm2)
+
+        # Align vectors to tokens
+        token_contributions = {token: contributions[i] for i, token in enumerate(token_list)}
+        # Sort and take top_n
+        top_n = list(sorted(token_contributions.items(), key=lambda x: x[1], reverse=True))[:top_n]
+        print(top_n)
+        top_n = [tok[0] for tok in top_n]
+        print(top_n)
+        
+        return top_n
 
     def _align_weights(self, t1, t2):
         """Take two text_uris, load the data, align the weights (filling absent tokens with 0)
@@ -58,27 +84,34 @@ class tfidfSimilarity():
 
         # Loop through tokens and produce aligned vectors- filling in zeros
         aligned_weights = [[],[]]
+        
         for token in all_tokens:
             weight_1 = data_1.get(token, 0)
             weight_2 = data_2.get(token, 0)
             aligned_weights[0].append(weight_1)
             aligned_weights[1].append(weight_2)
 
-        return aligned_weights
+        return aligned_weights, all_tokens
 
+    
+    
     def compare_weights(self, t1, t2):
         """Take two uris of texts and compare the tfidf weights for the tokens"""
 
         # Create aligned vectors
-        aligned_weights = self._align_weights(t1, t2)
+        aligned_weights, all_tokens = self._align_weights(t1, t2)
         
+        if self.top_n_tokens is not None:
+            top_tokens = self._identify_top_tokens(aligned_weights, all_tokens, self.top_n_tokens)
+        else:
+            top_tokens = None
         
         # Compute cosine similarity
         similarity = 1- cosine(aligned_weights[0], aligned_weights[1])
 
-        return similarity
+        return similarity, top_tokens
     
-    def compare_one_to_all(self, main_uri):
+    def compare_one_to_all(self, main_uri, top_tok_joiner = "_"):
         """Compare a main_uri with all of the other uris in the supplied directory"""
 
         print(f"Running similarities for {main_uri}")
@@ -91,8 +124,17 @@ class tfidfSimilarity():
 
         # TODO - Add ability to parallelise this
         for uri in tqdm(comparison_list):
-            similarity = self.compare_weights(main_uri, uri)
-            data_out.append({"b1": main_uri, "b2": uri, "similarity": similarity})
+            similarity, top_tokens = self.compare_weights(main_uri, uri)
+            data_dict = {"b1": main_uri, 
+                        "b2": uri,
+                        "similarity": similarity}
+            
+            if top_tokens is not None:
+                # Join the token list using the specified joiner
+                top_tokens = ",".join(top_tokens)
+                data_dict[f"top_{self.top_n_tokens}_tokens"] = top_tokens
+            
+            data_out.append(data_dict)
         
         # Transform to df and sort
         data_out = pd.DataFrame(data_out)
@@ -103,16 +145,20 @@ class tfidfSimilarity():
 
 
 
-    def one_to_all_csv(self, main_uri, csv_out):
+    def one_to_all_csv(self, main_uri, csv_out, top_n_tokens=None):
         """Take one uri compare that uri pairwise to every other uri in the given directory return a pairwise csv"""
+        self.top_n_tokens = top_n_tokens
         df = self.compare_one_to_all(main_uri)
         df.to_csv(csv_out, index=False)
 
-    def compare_all_pairwise(self, csv_dir_out):
+    def compare_all_pairwise(self, csv_dir_out, top_n_tokens=None):
         """Produce pairwise csvs for every csv in the input directory - return as set of csvs in a directory"""
         # Check dir exists - if not make it
         if not os.path.exists(csv_dir_out):
             os.mkdir(csv_dir_out)
+        
+        # Set top_no_tokens - for adding token evidence to similarities
+        self.top_n_tokens = top_n_tokens
 
         # Loop through all books and calculate and write pairwise csvs
         for uri in self.uri_list:
@@ -122,7 +168,7 @@ class tfidfSimilarity():
 if __name__ == "__main__":
     tfidf_dir = "../data/tfidf_tests"
     
-    tfidf_dfs = tdidfSimilarity(tfidf_dir)
-    tfidf_dfs.one_to_all_csv("0310Tabari.Tarikh", "../data/cosine_tests/Tabari_cosine.csv")
+    tfidf_dfs = tfidfSimilarity(tfidf_dir)
+    tfidf_dfs.one_to_all_csv("0310Tabari.Tarikh", "../data/cosine_tests/Tabari_cosine.csv", top_n_tokens=10)
 
-    tfidf_dfs.compare_all_pairwise("../data/cosine_tests/")
+    tfidf_dfs.compare_all_pairwise("../data/cosine_tests/", top_n_tokens=10)
