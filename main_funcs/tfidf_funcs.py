@@ -8,7 +8,7 @@ from collections import Counter
 from multiprocessing import Pool
 from transformers import AutoTokenizer
 
-REMOVE_PREFIXES=False
+REMOVE_PREFIXES=True
 
 def resolve_BPE_tokenizer(BPE_tokenizer):
     """Shared function for initialising the tokenizer - shared for easier maintanance"""
