@@ -8,6 +8,8 @@ from collections import Counter
 from multiprocessing import Pool
 from transformers import AutoTokenizer
 
+REMOVE_PREFIXES=False
+
 def resolve_BPE_tokenizer(BPE_tokenizer):
     """Shared function for initialising the tokenizer - shared for easier maintanance"""
     if BPE_tokenizer is not None:
@@ -113,7 +115,7 @@ class tfidfOpenITI():
             openiti_obj = openitiTextFull(path)
             # If BPE_tokens - then we use the BPE tokenizer - else use the openITI tokenizer
             if self.BPE_tokens:
-                tokens = openiti_obj.return_BPE_tokens(tokenizer=self.tokenizer, normalise=normalise, remove_prefixes=True)        
+                tokens = openiti_obj.return_BPE_tokens(tokenizer=self.tokenizer, normalise=normalise, remove_prefixes=REMOVE_PREFIXES)        
             else:
                 tokens = openiti_obj.return_cleaned_tokenized(normalise=normalise)
             token_list.extend(tokens)
@@ -259,7 +261,7 @@ class corpusIDF():
         """Take a path to an openITI text and load it as a set of unique tokens"""
         openiti_text = openitiTextFull(text_path)
         if self.BPE_tokens:
-            openiti_tokens = openiti_text.return_BPE_tokens(tokenizer=self.tokenizer, normalise=normalise, remove_prefixes=True)
+            openiti_tokens = openiti_text.return_BPE_tokens(tokenizer=self.tokenizer, normalise=normalise, remove_prefixes=REMOVE_PREFIXES)
         else:
             openiti_tokens = openiti_text.return_cleaned_tokenized(normalise=normalise)
         unique_tokens = set(openiti_tokens)
