@@ -1,5 +1,5 @@
 from openiti.helper.funcs import read_text, text_cleaner
-from openiti.helper.ara import normalize_ara_heavy, tokenize
+from openiti.helper.ara import normalize_ara_light, tokenize
 from transformers import AutoTokenizer
 import re
 import os
@@ -67,7 +67,7 @@ class openitiTextFull():
         """Return a text cleaned using openiti func"""
         text = text_cleaner(self.mARkdown_text)
         if normalise:
-            text = normalize_ara_heavy(text)
+            text = normalize_ara_light(text)
         return text
     
     def return_cleaned_tokenized(self, normalise=False):

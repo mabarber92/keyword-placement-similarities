@@ -7,7 +7,7 @@ import numpy as np
 from multiprocessing import Pool
 
 class tfidfSimilarity():
-    def __init__(self, csv_dir, multiprocess=False, pool_size=10):
+    def __init__(self, csv_dir, multiprocess=False, pool_size=20):
         """Take a directory of csvs containing tfidf weights and use them to
         compare tfidf between documents"""
 
